@@ -5,14 +5,14 @@ import AuthInput from "../../components/input/AuthInput";
 import { validateEmail } from '../../utils/helper';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
-import UserContext from '../../context/UserContext';
+import {UserContext} from '../../context/UserContext';
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
 
-  const {updateUser} = useContext(UserContext);
+  const { updateUser } = useContext(UserContext);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -41,7 +41,7 @@ const LoginForm = () => {
 
       if(token){
         localStorage.setItem("token", token);
-        updateUser(user)
+        updateUser(user);
         navigate("/dashboard");
       }
      }catch(error){

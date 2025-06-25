@@ -12,7 +12,8 @@ import CreatePoll from './pages/Dashboard/CreatePoll';
 import MyPolls from './pages/Dashboard/MyPolls';
 import VotedPolls from './pages/Dashboard/VotedPolls';
 import Bookmarks from './pages/Dashboard/Bookmarks';
-import UserProvider from "./context/UserContext";
+import {  UserProvider} from "./context/UserContext";
+import { Toaster } from "react-hot-toast";
 
 const App = () => {
   return (
@@ -21,15 +22,24 @@ const App = () => {
       <Router>
         <Routes>
            <Route path="/" element={<Root />} />
-           <Route path="/login" element={<LoginForm />} />
-           <Route path="/signup" element={<SignUpForm />} />
-           <Route path="/dashboard" element={<Home />} />
-           <Route path="/create-poll" element={<CreatePoll />} />
-           <Route path="/my-poll" element={<MyPolls />} />
-           <Route path="/voted-poll" element={<VotedPolls />} />
-           <Route path="/bookmarked-polls" element={<Bookmarks />} />
+           <Route path="/login" exact element={<LoginForm />} />
+           <Route path="/signup" exact element={<SignUpForm />} />
+           <Route path="/dashboard" exact element={<Home />} />
+           <Route path="/create-poll" exact element={<CreatePoll />} />
+           <Route path="/my-poll" exact element={<MyPolls />} />
+           <Route path="/voted-poll" exact element={<VotedPolls />} />
+           <Route path="/bookmarked-polls" exact element={<Bookmarks />} />
+           
         </Routes>
       </Router>
+      <Toaster
+        toastOptions={{
+          className: "",
+          style: {
+            fontSize:'13px'
+          },
+        }}
+        />
       </UserProvider>
     </div>
   )
@@ -37,7 +47,7 @@ const App = () => {
 
 export default App;
 
-//Define the root component to handle the initial redirect
+// Define the root component to handle the initial redirect
 const Root = () => {
   //Check if token exists in localstorage
   const isAuthenticated = !!localStorage.getItem("token");

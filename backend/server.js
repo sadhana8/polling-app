@@ -4,6 +4,7 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const path = require("path");
 const authRoutes = require("./routes/authRoutes");
+const pollRoutes = require("./routes/pollRoutes");
 const app = express();
 
 //Middleware to handle CORS
@@ -20,6 +21,7 @@ app.use(express.json());
 connectDB();
 
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/poll", pollRoutes);
 
 //Server uploadsfolder
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

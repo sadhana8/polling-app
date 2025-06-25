@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Poll = require("../models/Poll");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 
@@ -74,15 +75,28 @@ exports.loginUser = async (req, res) => {
         if (!user || !(await user.comparePassword(password))){
             return res.status(400).json({ message: "Invalid credentials" });
         }
+
+
+        //Create polls created by the user
+        const totalPollsCreated = await Poll.countDocuments({ creator: user._id });
+        
+        //Count polls the user has voted in
+        const totalPollsVotes = await Poll.countDocuments({
+            voters: user._id,
+        });
+
+        //Get the count of bookmarked polls
+      const totalpollsBookmarked = Array.isArray(user.bookmarkedPolls) ? user.bookmarkedPolls.length : 0;
+
         res
          .status(200)
          .json({
             id: user._id,
             user: {
                 ...user.toObject(),
-                totalPollsCreated : 0,
-                totalPollsVotes : 0,
-                totalpollsBookmarked : 0,
+                totalPollsCreated ,
+                totalPollsVotes,
+                totalpollsBookmarked,
             },
             token: generateToken(user._id),
          });

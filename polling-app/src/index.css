@@ -23,4 +23,18 @@
   .input-box {
     @apply flex items-center w-full bg-slate-100 border border-slate-200 text-sm text-black rounded-md px-4 py-3 mt-2 mb-4 shadow-sm focus-within:ring-2 focus-within:ring-[#00bfa6];
   }
+
+.option-chip {
+  @apply text-xs font-medium px-4 py-1 rounded-lg border cursor-pointer hover:border-[#00bfa6] transition;
+}
+/*
+.btn-small{
+  @apply flex items-center gap-1 text-xs font-medium bg-[#00bfa6] text-white;
+}
+.icon-btn{
+  @apply text-[20px] text-slate-300 cursor-pointer hover:text-blue-500;
+}
+.info-text{
+  @apply text-sm text-primary font-medium text-center p-3 bg-gray-100 rounded-lg;
+} */
 }
