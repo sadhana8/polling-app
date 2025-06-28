@@ -10,4 +10,4 @@ const CharAvatar = ({fullName, width, height, style}) => {
   )
 }
 
-export default CharAvatar
+export default CharAvatar;

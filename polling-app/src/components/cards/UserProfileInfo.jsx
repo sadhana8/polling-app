@@ -31,4 +31,4 @@ const UserProfileInfo = ({
   )
 }
 
-export default UserProfileInfo
+export default UserProfileInfo;

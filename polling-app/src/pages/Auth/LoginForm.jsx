@@ -38,12 +38,12 @@ const LoginForm = () => {
         password,
       });
       const { token, user } = response.data;
-
-      if(token){
-        localStorage.setItem("token", token);
-        updateUser(user);
-        navigate("/dashboard");
-      }
+if (token) {
+  localStorage.setItem("token", token);
+  localStorage.setItem("user", JSON.stringify(user)); // ✅ store user
+  updateUser(user);
+  navigate("/dashboard");
+}
      }catch(error){
              if(error.response && error.response.data.message){
               setError(error.response.data.message);
