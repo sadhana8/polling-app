@@ -69,85 +69,90 @@ exports.createPoll = async (req,res) => {
 }
 
 //Get All Polls
-exports.getAllPolls = async (req,res) => {
-    const { type, creatorId, page=1, limit=10 } = req.query;
-    const filter ={};
-    const userId = req.user._id;
-    
-    if (type) filter.type = type;
-    if (creatorId) filter.creator = creatorId;
+exports.getAllPolls = async (req, res) => {
+  const { type, creatorId, page = 1, limit = 10 } = req.query;
+  const filter = {};
+  const userId = req.user._id;
 
-    try{
-          //Calculate pagination parameters
-          const pageNumber = parseInt(page, 10);
-          const pageSize = parseInt(linit, 10);
-          const skip = (pageNumber - 1) * pageSize;
+  if (type) filter.type = type;
+  if (creatorId) filter.creator = creatorId;
 
-          //Fetch Polls with pagination
-          const polls = await Poll.find(filter)
-          .populate("creator", "fullName username email profileImageUrl")
-          .populate({
-            path: "responses.voterId",
-            select: "username profileImageUrl fullName",
-          })
-          .skip(skip)
-          .limit(pageSize)
-          .sort({ createdAt: -1 });
+  try {
+    const pageNumber = parseInt(page, 10);
+    const pageSize = parseInt(limit, 10);
+    const skip = (pageNumber - 1) * pageSize;
 
-          //Add userHasVoted flag for each poll
-          const updatePolls = polls.map((poll) =>{
-            const userHasVoted = poll.voters.some((voterId) =>
-            voterId.equals(userId));
-            return {
-                ...poll.toObject(),
-                userHasVoted,
-            };
-          });
+    const polls = await Poll.find(filter)
+      .populate("creator", "fullName username email profileImageUrl")
+      .populate({
+        path: "responses.voterId",
+        select: "username profileImageUrl fullName",
+      })
+      .skip(skip)
+      .limit(pageSize)
+      .sort({ createdAt: -1 });
 
-          //Get total count of polls for pagination metadata
-          const totalPolls = await Poll.countDocuments(filter);
+    const updatePolls = polls.map((poll) => {
+      const userHasVoted = poll.voters.some((voterId) =>
+        voterId.equals(userId)
+      );
+      return {
+        ...poll.toObject(),
+        userHasVoted,
+      };
+    });
 
-          const stats = await Poll.aggregate([
-            {
-                $group: {
-                    _id: "$type",
-                    count: {  $sum: 1 },
-                },
-            },
-            {
-                $project: {
-                    type:"$_id",
-                    count: 1,
-                    _id: 0,
-                },
-            },
-          ]);
+    const totalPolls = await Poll.countDocuments(filter);
 
-          //Ensure all types are included in stats, even those with zero counts
-          const allTypes = [
-            {type: "single-choice", label: "Single Choice"},
-            {type: "yes/no", label: "Yes/No"},
-            {type: "rating", label: "Rating"},
-            {type: "image-based", label: "Image Based"},
-            {type: "open-ended", label: "Open Ended"},
-          ];
-          const statsWithDefaults = allTypes
-          .map((pollType)=> {
-            const stat = stats.find((item) => item.type === pollType.type);
-            return{
-                label: pollType.label,
-                type: pollType.type,
-                count: stat ? stat.count : 0,
-            };
-          })
-          .sort((a,b) => b.count - a.count);
-    }catch (err){
-        res
-        .status(500)
-        .json({ message: "Error registrating user", error: err.message });
+    const stats = await Poll.aggregate([
+      {
+        $group: {
+          _id: "$type",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          type: "$_id",
+          count: 1,
+          _id: 0,
+        },
+      },
+    ]);
 
-    }
+    const allTypes = [
+      { type: "single-choice", label: "Single Choice" },
+      { type: "yes/no", label: "Yes/No" },
+      { type: "rating", label: "Rating" },
+      { type: "image-based", label: "Image Based" },
+      { type: "open-ended", label: "Open Ended" },
+    ];
+
+    const statsWithDefaults = allTypes
+      .map((pollType) => {
+        const stat = stats.find((item) => item.type === pollType.type);
+        return {
+          label: pollType.label,
+          type: pollType.type,
+          count: stat ? stat.count : 0,
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    // ✅ Final response fix
+    res.status(200).json({
+      polls: updatePolls,
+      currentPage: pageNumber,
+      totalPages: Math.ceil(totalPolls / pageSize),
+      totalPolls,
+      stats: statsWithDefaults,
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching polls", error: err.message });
+  }
 };
+
 
 // //Get All voted Polls
 exports.getVotedPolls = async (req,res) => {
@@ -272,151 +277,138 @@ exports.voteOnPoll = async (req,res) => {
     }
 };
 
-// //ClosePoll
- exports.closePoll = async (req,res) => {
-    const { id } = req.params;
-    const userId = req.user.id;
+ // BookmarkPoll
+exports.bookmarkPoll = async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params; // ✅ FIXED
 
-    try{
-        const poll = await Poll.findById(id);
-
-        if(!poll){
-            return res.status(404).json({ message: "Poll not found" });
-        }
-
-        if(poll.creator.toString() !== userId){
-            return res 
-            .status(403)
-            .json({ message: "You are not authorized to close this poll."});
-        }
-    
-        poll.closed = true;
-        await poll.save();
-
-        res.status(200).json({ message: "Poll closed successfully", poll });
-    }catch (err){
-        res
-        .status(500)
-        .json({ message: "Error registrating user", error: err.message });
-
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
- };
 
-// BookmarkPoll
- exports.bookmarkPoll = async (req,res) => {
-          const userId = req.user.id;
-    try{
-       const user = await User.findById(userId);
-       if(!user){
-        return res.status(404).json({ message: "User not found"});
-       }
+    // Check if poll is already bookmarked
+    const isBookmarked = user.bookmarkedPolls.includes(id);
 
-       //check if poll is already bookmarked
-       const isBookmarked = user.bookmarkedPolls.includes(id);
+    if (isBookmarked) {
+      // Remove poll from bookmarks
+      user.bookmarkedPolls = user.bookmarkedPolls.filter(
+        (pollId) => pollId.toString() !== id
+      );
 
-       if(isBookmarked){
-        //Remove poll from bookmarks
-        user.bookmarkedPolls = user.bookmarkedPolls.filter(
-            (pollId) => pollId.toString() !== id
-        );
-
-        await user.save();
-        return res.status(200).json({
-            message: "Poll removed from bookmarks",
-            bookmarkedPolls: user.bookmarkedPolls,
-        });
-       }
-
-       //Add poll to bookmarks
-       user.bookmarkedPolls.push(id);
-       await user.save();
-       res.status(200).json({
-        message: "Poll bookmarked successfully",
+      await user.save();
+      return res.status(200).json({
+        message: "Poll removed from bookmarks",
         bookmarkedPolls: user.bookmarkedPolls,
-       });
-    }catch (err){
-        res
-        .status(500)
-        .json({ message: "Error registrating user", error: err.message });
-
+      });
     }
- };
+
+    // Add poll to bookmarks
+    user.bookmarkedPolls.push(id);
+    await user.save();
+
+    res.status(200).json({
+      message: "Poll bookmarked successfully",
+      bookmarkedPolls: user.bookmarkedPolls,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Error bookmarking poll",
+      error: err.message,
+    });
+  }
+};
+
 
  //Get All bookmared Poll
- exports.getBookmarkedPolls= async (req,res) => {
+exports.getBookmarkedPolls = async (req, res) => {
+  const userId = req.user.id;
 
-    const userId = req.user.id;
+  try {
+    const user = await User.findById(userId)
+      .populate({
+        path: "bookmarkedPolls",
+        populate: [
+          {
+            path: "creator",
+            select: "fullName username profileImageUrl",
+          },
+        ],
+      });
 
-    try{
-        const user = await User.findById(userId).populate({
-            path: "bookmarkedPolls",
-            populate: {
-                path: "creator",
-                select: "fullName username profileImageUrl",
-            },
-        })
-        .populate({
-            path: "bookmarkedPolls",
-            populate: {
-                path: "creator",
-                select: "fullName username profileImageUrl",
-            },                
-        });
-
-        if( !user){
-            return res.status(404).json({ message: "User not found"})
-        }
-
-        const bookmarkedPolls = user.bookmarkedPolls;
-
-        //Add userHasVoted flag for each poll
-        const updatedPolls = bookmarkedPolls.map((poll) =>{
-            const userHasVoted = poll.voters.some((voterId) => 
-            voterId.equals(userId)
-        );
-
-        return {
-            ...poll.toObject(),
-            userHasVoted,
-        };
-        });
-
-        res.status(200).json({ bookmarkedPolls: updatedPolls });
-    }catch (err){
-        res
-        .status(500)
-        .json({ message: "Error registrating user", error: err.message });
-
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
- };
 
- //Delete Poll
- exports.deletePoll = async (req,res) => {
-    const { id } = req.params;
-    const userId = req.user.id;
+    const bookmarkedPolls = user.bookmarkedPolls;
 
-    try{
-        const poll = await Poll.findById(id);
+    const updatedPolls = bookmarkedPolls.map((poll) => {
+      const userHasVoted = poll.voters?.some((voterId) =>
+        voterId.toString() === userId
+      );
 
-        if(!poll){
-            return res.status(404).json({ message: "Poll not found "});
-        }
+      return {
+        ...poll.toObject(),
+        userHasVoted,
+      };
+    });
 
-        if(poll.creator.toString() !== userId ){
+    // Return data as 'polls' to match frontend expectation
+    res.status(200).json({ polls: updatedPolls });
+  } catch (err) {
+    console.error("Error in getBookmarkedPolls:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching bookmarked polls", error: err.message });
+  }
+};
 
-            return res
-            .status(403)
-            .json({ message: "You are not authorized to delete this poll. "});
-        }
+// Close Poll
+exports.closePoll = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id || req.user.id; // Support both token formats
 
-        await Poll.findByIdAndDelete(id);
-
-        res.status(200).json({ message: "Poll deleted successfully"});
-    
-    }catch (err){
-        res
-        .status(500)
-        .json({ message: "Error registrating user", error: err.message });
-
+  try {
+    const poll = await Poll.findById(id);
+    if (!poll) {
+      return res.status(404).json({ message: "Poll not found" });
     }
- };
+
+    if (poll.creator.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "You are not authorized to close this poll." });
+    }
+
+    poll.closed = true;
+    await poll.save();
+
+    res.status(200).json({ message: "Poll closed successfully", poll });
+  } catch (err) {
+    console.error("Close Poll Error:", err);
+    res.status(500).json({ message: "Error closing poll", error: err.message });
+  }
+};
+
+// Delete Poll
+exports.deletePoll = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id || req.user.id;
+
+  try {
+    const poll = await Poll.findById(id);
+    if (!poll) {
+      return res.status(404).json({ message: "Poll not found" });
+    }
+
+    if (poll.creator.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "You are not authorized to delete this poll." });
+    }
+
+    await Poll.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Poll deleted successfully" });
+  } catch (err) {
+    console.error("Delete Poll Error:", err);
+    res.status(500).json({ message: "Error deleting poll", error: err.message });
+  }
+};

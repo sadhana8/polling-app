@@ -9,9 +9,12 @@ export const UserProvider = ({ children }) => {
     return storedUser ? JSON.parse(storedUser) : null;
   });
 
+  // Keep localStorage in sync with state
   useEffect(() => {
     if (user) {
       localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
     }
   }, [user]);
 
@@ -24,6 +27,7 @@ export const UserProvider = ({ children }) => {
     localStorage.removeItem('user');
   };
 
+  // Safely update any single user stat (created, voted, bookmarked)
   const updateUserStats = (key, value) => {
     setUser((prev) => ({
       ...prev,
@@ -31,34 +35,38 @@ export const UserProvider = ({ children }) => {
     }));
   };
 
+  // Call this after a vote is submitted
   const onUserVoted = () => {
-    const totalPollsVotes = user?.totalPollsVotes || 0;
-    updateUserStats("totalPollsVotes", totalPollsVotes + 1);
+    const currentVotes = user?.totalPollsVotes || 0;
+    updateUserStats('totalPollsVotes', currentVotes + 1);
   };
 
-  const onPollCreateOrDelete = (type = "create") => {
-    const totalPollsCreated = user?.totalPollsCreated || 0;
-    updateUserStats("totalPollsCreated", type === "create" ? totalPollsCreated + 1 : totalPollsCreated - 1);
+  // Call this after poll creation/deletion
+  const onPollCreateOrDelete = (type = 'create') => {
+    const currentCreated = user?.totalPollsCreated || 0;
+    updateUserStats(
+      'totalPollsCreated',
+      type === 'create' ? currentCreated + 1 : Math.max(0, currentCreated - 1)
+    );
   };
 
-const toggleBookmarkId = (id) => {
-  const bookmarks = user.bookmarkedPolls || [];
-  const index = bookmarks.indexOf(id);
+  // Bookmark toggle logic
+  const toggleBookmarkId = (id) => {
+    const bookmarks = user?.bookmarkedPolls || [];
+    const isAlreadyBookmarked = bookmarks.includes(id);
 
-  if (index === -1) {
+    const updatedBookmarks = isAlreadyBookmarked
+      ? bookmarks.filter((pollId) => pollId !== id)
+      : [...bookmarks, id];
+
     setUser((prev) => ({
       ...prev,
-      bookmarkedPolls: [...bookmarks, id],
-      totalPollsBookmarked: prev.totalPollsBookmarked + 1,
+      bookmarkedPolls: updatedBookmarks,
+      totalPollsBookmarked: isAlreadyBookmarked
+        ? Math.max(0, (prev.totalPollsBookmarked || 0) - 1)
+        : (prev.totalPollsBookmarked || 0) + 1,
     }));
-  } else {
-    setUser((prev) => ({
-      ...prev,
-      bookmarkedPolls: bookmarks.filter((item) => item !== id),
-      totalPollsBookmarked: prev.totalPollsBookmarked - 1,
-    }));
-  }
-};
+  };
 
   return (
     <UserContext.Provider

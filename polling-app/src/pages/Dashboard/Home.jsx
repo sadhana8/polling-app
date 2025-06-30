@@ -103,7 +103,7 @@ const Home = () => {
               creatorProfileImg={poll.creator.profileImageUrl || null}
               creatorName={poll.creator.fullName}
               creatorUsername={poll.creator.username}
-              userHasVoted={poll.userHasVoted || false} // This determines the "Voted" or "Bookmark" button
+              userHasVoted={poll.userHasVoted || false}
               isPollClosed={poll.closed || false}
               createdAt={poll.createdAt || false}
             />

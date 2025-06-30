@@ -12,12 +12,16 @@ const axiosInstance = axios.create({
 
 //Register Interceptor
 axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  },
-  (error) => Promise.reject(error)
+    (config) => {
+        const accessToken = localStorage.getItem("token");
+        if(accessToken){
+            config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
 );
 //Response Interceptor
 axiosInstance.interceptors.response.use(

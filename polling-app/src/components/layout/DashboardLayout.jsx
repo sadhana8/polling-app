@@ -7,31 +7,35 @@ import TreadingPolls from './TreadingPolls';
 
 const DashboardLayout = ({ children, activeMenu, stats, showStats }) => {
   const { user } = useContext(UserContext);
+
   return (
     <div>
-        <Navbar activeMenu={activeMenu} />
-        <div className='flex'>
+      <Navbar activeMenu={activeMenu} />
+      <div className='flex'>
         <div className='max-[1080px]:hidden'>
-            <SideMenu activeMenu={activeMenu} />
+          <SideMenu activeMenu={activeMenu} />
         </div>
+
         <div className='grow mx-5'>
-            {children}
+          {children}
         </div>
+
         <div className='hidden md:block mr-5'>
-          {/* {JSON.stringify(user)} */}
           <UserDetailsCard
-            profileImageUrl = {user && user.profileImageUrl}
-            fullname = { user && user.fullName}
-            username = { user && user.username}
-            totalPollsVotes = {user && user.totalPollsVotes}
-            totalPollsCreated = { user && user.totalPollsCreated}
-            totalPollsBookmared = { user && user.totalPollsBookmared}
-            />
-            {showStats && stats && stats.length > 0 && <TreadingPolls stats={stats} />}
+            profileImageUrl={user?.profileImageUrl || ""}
+            fullname={user?.fullName || "User"}
+            username={user?.username || ""}
+            totalPollsVotes={user?.totalPollsVotes || 0}
+            totalPollsCreated={user?.totalPollsCreated || 0}
+            totalPollsBookmarked={user?.totalPollsBookmarked || 0}
+          />
+          {showStats && stats && stats.length > 0 && (
+            <TreadingPolls stats={stats} />
+          )}
         </div>
-        </div>
+      </div>
     </div>
-  )
-}
+  );
+};
 
 export default DashboardLayout;

@@ -10,7 +10,6 @@ import EmptyCard from '../../components/cards/EmptyCard';
 import CREATE_ICON from '../../assets/images/create-icon.png';
 import Spinner from '../../components/common/Spinner';
 import HeaderWithFilter from '../../components/layout/HeaderWithFilter';
-import { POLL_TYPE } from '../../utils/data';
 
 const VotedPolls = () => {
   useUserAuth();
@@ -28,7 +27,11 @@ const VotedPolls = () => {
 
     try {
       const response = await axiosInstance.get(API_PATHS.POLLS.VOTED_POLLS);
-      const polls = response.data.polls || [];
+      let polls = response.data.polls || [];
+
+      // Sort polls by creation date (latest first)
+      polls.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
       setAllPolls(polls);
       setFilteredPolls(polls);
     } catch (err) {

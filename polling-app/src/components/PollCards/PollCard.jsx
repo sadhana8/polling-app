@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useState } from 'react';
+import React, { useCallback, useContext, useState, useEffect } from 'react';
 import { UserContext } from '../../context/UserContext';
 import PollActions from './PollActions';
 import PollContent from './PollContent';
@@ -29,16 +29,21 @@ const PollCard = ({
   const [rating, setRating] = useState(0);
   const [userResponse, setUserResponse] = useState('');
   const [isVoteComplete, setIsVoteComplete] = useState(userHasVoted);
-  const [pollResult, setPollResult] = useState({
-    options,
-    voters,
-    responses,
-  });
+  const [pollResult, setPollResult] = useState({ options, voters, responses });
 
-  const isPollBookmarked = user.bookmarkedPolls?.includes(pollId);
-  const [getPollBookmarked, setPollBookmarked] = useState(isPollBookmarked);
   const [pollClosed, setPollClosed] = useState(isPollClosed || false);
   const [pollDeleted, setPollDeleted] = useState(false);
+
+  // ⚠️ IMPORTANT: Dynamic bookmark state synced with UserContext
+  const [isBookmarked, setIsBookmarked] = useState(false);
+
+  useEffect(() => {
+    if (user?.bookmarkedPolls?.includes(pollId)) {
+      setIsBookmarked(true);
+    } else {
+      setIsBookmarked(false);
+    }
+  }, [user.bookmarkedPolls, pollId]);
 
   const handleInput = (value) => {
     if (type === 'rating') setRating(value);
@@ -59,7 +64,6 @@ const PollCard = ({
   const getPollDetail = async () => {
     try {
       const response = await axiosInstance.get(API_PATHS.POLLS.GET_BY_ID(pollId));
-
       if (response.data) {
         const pollDetails = response.data;
         setPollResult({
@@ -76,7 +80,7 @@ const PollCard = ({
   const handleVoteSubmit = async () => {
     try {
       await axiosInstance.post(API_PATHS.POLLS.VOTE(pollId), getPostData());
-      getPollDetail();
+      await getPollDetail();
       setIsVoteComplete(true);
       onUserVoted();
       toast.success('Vote submitted successfully!');
@@ -89,9 +93,9 @@ const PollCard = ({
   const toggleBookmark = async () => {
     try {
       const response = await axiosInstance.post(API_PATHS.POLLS.BOOKMARK(pollId));
-      toggleBookmarkId(pollId);
-      setPollBookmarked((prev) => !prev);
-      toast.success(response.data.message || 'Poll bookmarked successfully!');
+      toggleBookmarkId(pollId); // Updates UserContext
+      setIsBookmarked((prev) => !prev); // Local optimistic update
+      toast.success(response.data.message || 'Bookmark updated!');
     } catch (error) {
       console.error('Bookmark error:', error?.response?.data || error.message);
       toast.error('Error bookmarking poll. Please try again.');
@@ -106,8 +110,8 @@ const PollCard = ({
         toast.success(response.data?.message || 'Poll closed successfully!');
       }
     } catch (error) {
-      toast.error('Something went wrong while closing the poll. Please try again.');
-      console.log('Error closing poll', error);
+      toast.error('Error closing the poll.');
+      console.error('Error closing poll', error);
     }
   };
 
@@ -120,61 +124,61 @@ const PollCard = ({
         toast.success(response.data?.message || 'Poll deleted successfully!');
       }
     } catch (error) {
-      toast.error('Something went wrong while deleting the poll. Please try again.');
-      console.log('Error deleting poll', error);
+      toast.error('Error deleting the poll.');
+      console.error('Error deleting poll', error);
     }
   };
 
+  if (pollDeleted) return null;
+
   return (
-    !pollDeleted && (
-      <div className="bg-white shadow-md rounded-xl px-6 py-5 my-6 transition-transform transform hover:scale-[1.01] duration-200 ease-in-out">
-        <div className="flex items-start justify-between">
-          <UserProfileInfo
-            imgUrl={creatorProfileImg}
-            fullname={creatorName}
-            username={creatorUsername}
-            createdAt={createdAt}
-          />
+    <div className="bg-white shadow-md rounded-xl px-6 py-5 my-6 transition-transform transform hover:scale-[1.01] duration-200 ease-in-out">
+      <div className="flex items-start justify-between">
+        <UserProfileInfo
+          imgUrl={creatorProfileImg}
+          fullname={creatorName}
+          username={creatorUsername}
+          createdAt={createdAt}
+        />
 
-          <PollActions
-            pollId={pollId}
-            isVoteComplete={isVoteComplete}
-            inputCaptured={!!(userResponse || selectedOptionIndex >= 0 || rating)}
-            onVoteSubmit={handleVoteSubmit}
-            isBookmarked={getPollBookmarked}
-            toggleBookmark={toggleBookmark}
-            isMyPoll={isMyPoll}
-            pollClosed={pollClosed}
-            onClosePoll={closePoll}
-            onDelete={deletePoll}
-          />
-        </div>
-
-        <div className="ml-14 mt-4">
-          <p className="text-base font-semibold text-gray-800 mb-3">{question}</p>
-
-          {isVoteComplete || pollClosed ? (
-            <PollingResultContent
-              type={type}
-              options={pollResult.options || []}
-              voters={pollResult.voters}
-              responses={pollResult.responses || []}
-            />
-          ) : (
-            <PollContent
-              type={type}
-              options={options}
-              selectedOptionIndex={selectedOptionIndex}
-              onOptionSelect={handleInput}
-              rating={rating}
-              onRatingChange={handleInput}
-              userResponse={userResponse}
-              onResponseChange={handleInput}
-            />
-          )}
-        </div>
+        <PollActions
+          pollId={pollId}
+          isVoteComplete={isVoteComplete}
+          inputCaptured={!!(userResponse || selectedOptionIndex >= 0 || rating)}
+          onVoteSubmit={handleVoteSubmit}
+          isBookmarked={isBookmarked}
+          toggleBookmark={toggleBookmark}
+          isMyPoll={isMyPoll}
+          pollClosed={pollClosed}
+          onClosePoll={closePoll}
+          onDelete={deletePoll}
+        />
       </div>
-    )
+
+      <div className="ml-14 mt-4">
+        <p className="text-base font-semibold text-gray-800 mb-3">{question}</p>
+
+        {isVoteComplete || pollClosed ? (
+          <PollingResultContent
+            type={type}
+            options={pollResult.options || []}
+            voters={pollResult.voters}
+            responses={pollResult.responses || []}
+          />
+        ) : (
+          <PollContent
+            type={type}
+            options={options}
+            selectedOptionIndex={selectedOptionIndex}
+            onOptionSelect={handleInput}
+            rating={rating}
+            onRatingChange={handleInput}
+            userResponse={userResponse}
+            onResponseChange={handleInput}
+          />
+        )}
+      </div>
+    </div>
   );
 };
 

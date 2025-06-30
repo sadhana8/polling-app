@@ -11,6 +11,7 @@ import { UserContext } from '../../context/UserContext';
 import EmptyCard from '../../components/cards/EmptyCard';
 import Spinner from '../../components/common/Spinner';
 import CREATE_ICON from '../../assets/images/create-icon.png';
+import { Toaster } from "react-hot-toast";
 
 const PAGE_SIZE = 10;
 
@@ -69,6 +70,29 @@ const MyPolls = () => {
     }
   }, [page]);
 
+  const handleClosePoll = async (pollId) => {
+    try {
+      await axiosInstance.patch(API_PATHS.POLLS.CLOSE(pollId));
+      Toaster.success("Poll closed successfully");
+      fetchAllPolls(1);
+    } catch (error) {
+      Toaster.error("Failed to close poll", error?.response?.data?.message || "An error occurred" );
+    }
+  };
+
+  const handleDeletePoll = async (pollId) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this poll?");
+    if (!confirmDelete) return;
+
+    try {
+      await axiosInstance.delete(API_PATHS.POLLS.DELETE(pollId));
+      Toaster.success("Poll deleted successfully");
+      fetchAllPolls(1);
+    } catch (error) {
+     Toaster.error("Failed to delete poll", error?.response?.data?.message || "An error occurred");
+    }
+  };
+
   return (
     <DashboardLayout activeMenu="My polls">
       <div className='bg-gray-100/80 my-5 p-5 rounded-lg mx-auto'>
@@ -113,6 +137,9 @@ const MyPolls = () => {
                 userHasVoted={poll.userHasVoted || false}
                 isPollClosed={poll.closed || false}
                 createdAt={poll.createdAt || null}
+                showActions={true}
+                onClose={handleClosePoll}
+                onDelete={handleDeletePoll}
               />
             ))}
           </InfiniteScroll>

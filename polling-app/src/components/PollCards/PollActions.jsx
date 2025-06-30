@@ -2,80 +2,82 @@ import React, { useState } from 'react';
 import { FaBookmark, FaRegBookmark } from 'react-icons/fa';
 
 const PollActions = ({
-    isVoteComplete,
-    inputCaptured,
-    onVoteSubmit,
-    isBookmarked,
-    toggleBookmark,
-    isMyPoll,
-    pollClosed,
-    onClosePoll,
-    onDelete,
+  isVoteComplete,
+  inputCaptured,
+  onVoteSubmit,
+  isBookmarked,
+  toggleBookmark,
+  isMyPoll,
+  pollClosed,
+  onClosePoll,
+  onDelete,
 }) => {
+  const [loading, setLoading] = useState(false);
 
-    const [loading, setLoading] = useState(false);
+  const handleVoteClick = async () => {
+    setLoading(true);
+    try {
+      await onVoteSubmit();
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Handle the vote submission click
-    const handleVoteClick = async () => {
-        setLoading(true);
-        try {
-            await onVoteSubmit();
-        } finally {
-            setLoading(false);
-        }
-    };
+  return (
+    <div className="flex items-center gap-2">
+      {/* Voted or Closed badge */}
+      {(isVoteComplete || pollClosed) && (
+        <span
+          className={`text-xs px-2 py-1 rounded-full font-medium ${
+            pollClosed
+              ? 'bg-red-100 text-red-700'
+              : 'bg-blue-100 text-blue-700'
+          }`}
+        >
+          {pollClosed ? 'Closed' : 'Voted'}
+        </span>
+      )}
 
-    return (
-        <div className="flex items-center gap-4">
-            {/* Display "Voted" or "Closed" based on vote status */}
-            {(isVoteComplete || pollClosed) && (
-                <div className="text-[11px] font-medium text-slate-600 bg-sky-700/10 px-3 py-1 rounded-md">
-                    {pollClosed ? "Closed" : "Voted"}
-                </div>
-            )}
+      {/* Owner-only actions */}
+      {isMyPoll && !pollClosed && (
+        <>
+          <button
+            onClick={onClosePoll}
+            className="text-xs px-2 py-1 rounded-md bg-orange-100 text-orange-700 hover:bg-orange-200"
+          >
+            Close
+          </button>
 
-            {/* Show actions for the poll owner only if the poll isn't closed */}
-            {isMyPoll && !pollClosed && (
-                <div className="flex items-center gap-2">
-                    <button
-                        className="btn-small"
-                        onClick={onClosePoll} // Close poll
-                    >
-                        Close Poll
-                    </button>
-                    <button
-                        className="btn-small"
-                        onClick={onDelete} // Delete poll
-                    >
-                        Delete Poll
-                    </button>
-                </div>
-            )}
+          <button
+            onClick={onDelete}
+            className="text-xs px-2 py-1 rounded-md bg-red-100 text-red-700 hover:bg-red-200"
+          >
+            Delete
+          </button>
+        </>
+      )}
 
-            {/* Bookmark button: Toggle the bookmark state */}
-            <button 
-                className="text-[20px] text-slate-300 cursor-pointer hover:text-blue-500" 
-                onClick={toggleBookmark}
-            >
-                {isBookmarked ? (
-                    <FaBookmark className="text-[#00a896]" />
-                ) : (
-                    <FaRegBookmark />
-                )}
-            </button>
+      {/* Bookmark icon */}
+      <button
+        className="text-xl text-slate-400 hover:text-teal-500"
+        onClick={toggleBookmark}
+        title={isBookmarked ? 'Remove Bookmark' : 'Add to Bookmarks'}
+      >
+        {isBookmarked ? <FaBookmark className="text-teal-600" /> : <FaRegBookmark />}
+      </button>
 
-            {/* Submit vote button */}
-            {inputCaptured && !isVoteComplete && (
-                <button 
-                    className="btn-small ml-auto" 
-                    onClick={handleVoteClick} 
-                    disabled={loading}
-                >
-                    {loading ? "Submitting..." : "Submit"} 
-                </button>
-            )}
-        </div>
-    );
+      {/* Submit Vote Button */}
+      {inputCaptured && !isVoteComplete && !pollClosed && (
+        <button
+          onClick={handleVoteClick}
+          disabled={loading}
+          className="text-xs px-3 py-1 rounded-md bg-teal-600 text-white hover:bg-teal-700 transition ml-2"
+        >
+          {loading ? 'Submitting...' : 'Submit'}
+        </button>
+      )}
+    </div>
+  );
 };
 
 export default PollActions;

@@ -7,37 +7,42 @@ import axiosInstance from '../../utils/axiosInstance';
 import PollCard from '../../components/PollCards/PollCard';
 import InfiniteScroll from "react-infinite-scroll-component";
 import EmptyCard from '../../components/cards/EmptyCard';
-import BOOKMARK_ICON from '../../assets/images/bookmark-icon.png'; // Adjust the path as necessary
+import BOOKMARK_ICON from '../../assets/images/bookmark-icon.png';
 import { UserContext } from '../../context/UserContext';
 
-const PAGE_SIZE = 10; // Define how many polls per page
+const PAGE_SIZE = 10;
 
 const Bookmarks = () => {
   useUserAuth();
 
   const navigate = useNavigate();
-  const { user } = useContext(UserContext);
+  const { User } = useContext(UserContext);
 
-  const [bookmaredPolls, setBookmarkedPolls] = useState([]);
+  const [bookmarkedPolls, setBookmarkedPolls] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
 
- 
-  const fetchbookmaredPolls = async () => {
+  const fetchBookmarkedPolls = async () => {
     if (loading) return;
 
     setLoading(true);
 
     try {
-      const response = await axiosInstance.get(API_PATHS.POLLS.GET_BOOKMARKED);
+      // Assuming API supports pagination via query params like ?page=1&limit=10
+      const response = await axiosInstance.get(API_PATHS.POLLS.GET_BOOKMARKED, {
+        params: { page, limit: PAGE_SIZE },
+      });
 
-      if (response.data?.polls?.length > 0) {
-        setBookmarkedPolls((prevPolls) => [...prevPolls, ...response.data.polls]);
-        setHasMore(response.data.polls.length === PAGE_SIZE);
+      const polls = response.data?.polls || [];
+
+      if (page === 1) {
+        setBookmarkedPolls(polls);
       } else {
-        setHasMore(false);
+        setBookmarkedPolls((prevPolls) => [...prevPolls, ...polls]);
       }
+
+      setHasMore(polls.length === PAGE_SIZE);
     } catch (error) {
       console.error("Error fetching polls:", error);
     } finally {
@@ -45,74 +50,53 @@ const Bookmarks = () => {
     }
   };
 
-  const loadMorePolls =() => {
-    setPage((prevPage) => prevPage + 1 );
-  }
-  
+  const loadMorePolls = () => {
+    setPage((prevPage) => prevPage + 1);
+  };
+
   useEffect(() => {
-      fetchbookmaredPolls();
-       return () => {};
+    fetchBookmarkedPolls();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   return (
     <DashboardLayout activeMenu="Bookmarks">
-      <div className='my-5 mx-auto'>
-        <h2 className='text-xl font-medium text-black'>Bookmarks</h2>
+      <div className="my-5 mx-auto">
+        <h2 className="text-xl font-medium text-black">Bookmarks</h2>
 
-            {bookmaredPolls.length > 0 && !loading && (
-        <EmptyCard
-           imgSrc={BOOKMARK_ICON}
-           message="You haven't Bookmarked polls yet! Start bookmarking your favorites to keep track of them!"
-           btnText="Explore"
-           onClick={() => navigate('/dashboard')} 
-           />
-       )}
+        {bookmarkedPolls.length === 0 && !loading && (
+          <EmptyCard
+            imgSrc={BOOKMARK_ICON}
+            message="You haven't Bookmarked polls yet! Start bookmarking your favorites to keep track of them!"
+            btnText="Explore"
+            onClick={() => navigate('/dashboard')}
+          />
+        )}
 
-         <InfiniteScroll 
-          dataLength={bookmaredPolls.length}
+        <InfiniteScroll
+          dataLength={bookmarkedPolls.length}
           next={loadMorePolls}
           hasMore={hasMore}
-          loader={<h4 className='info-text'>Loading...</h4>}
-          endMessage={<p className='info-text'>No more polls to displsy.</p>}
-          >
-
-        {bookmaredPolls.map((poll) => {
-          if(!user.bookmarkedPolls?.includes(poll._id)) return null;
-          return ( // Ensure the poll is bookmarked by the user
-          <PollCard
-          key={`dashboard_${poll._id}`}
-          pollId= {poll._id}
-          question={poll.question}
-          type={poll.type}
-          options={poll.options}
-          voters={poll.voters.length || 0}
-          responses={poll.responses || []}
-          creatorProfileImg={poll.creator.profileImageUrl || null}
-          creatorName={poll.creator.fullName}
-          creatorUsername={poll.creator.username}
-          userHasVoted={poll.userHasVoted || false}
-          isPollClosed={poll.closed || false}
-          createdAt={poll.createdAt || false}
-          />
-          
-        )})}
-      
-
-        {/* Optional: Render Polls */}
-        <div className='mt-4 space-y-4'>
-          {bookmaredPolls.map((poll) => (
-            <div
-              key={poll._id}
-              className='p-4 border rounded shadow-sm hover:shadow-md cursor-pointer'
-              onClick={() => navigate(`/poll/${poll._id}`)}
-            >
-              <h3 className='text-lg font-semibold'>{poll.question}</h3>
-              <p className='text-sm text-gray-600'>Type: {poll.type}</p>
-            </div>
+          loader={<h4 className="info-text">Loading...</h4>}
+          endMessage={<p className="info-text">No more polls to display.</p>}
+        >
+          {bookmarkedPolls.map((poll) => (
+            <PollCard
+              key={`dashboard_${poll._id}`}
+              pollId={poll._id}
+              question={poll.question}
+              type={poll.type}
+              options={poll.options}
+              voters={poll.voters.length || 0}
+              responses={poll.responses || []}
+              creatorProfileImg={poll.creator.profileImageUrl || null}
+              creatorName={poll.creator.fullName}
+              creatorUsername={poll.creator.username}
+              userHasVoted={poll.userHasVoted || false}
+              isPollClosed={poll.closed || false}
+              createdAt={poll.createdAt || false}
+            />
           ))}
-        </div>
-
-        
         </InfiniteScroll>
       </div>
     </DashboardLayout>
